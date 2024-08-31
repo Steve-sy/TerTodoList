@@ -36,3 +36,23 @@
     transform: rotate(360deg);
   }
 }
+body {
+  font-family: "Cairo", sans-serif !important;
+}
+.cairo {
+  font-family: "Cairo", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 200;
+  font-style: normal;
+  font-variation-settings: "slnt" 0;
+}
+.IconButton:hover {
+  background-color: darkgray !important;
+}
+.CardTodo {
+  transition: all 0.2s !important;
+}
+.CardTodo:hover {
+  padding-bottom: 2px;
+  padding-top: 2px;
+}
