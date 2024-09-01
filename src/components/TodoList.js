@@ -1,53 +1,128 @@
+import React, { useContext, useEffect, useState, useMemo } from "react";
 import {
   Button,
   Container,
   Card,
   CardContent,
   Typography,
-  CardActions,
   Divider,
   ToggleButtonGroup,
   ToggleButton,
-  Tab,
-  Tabs,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import React, { useContext, useEffect, useState } from "react";
 import Todo from "./Todo";
-import { NetworkCell } from "@mui/icons-material";
 import { TodosContext } from "../contexts/todosContext";
 import { v4 as uid } from "uuid";
+import { toastContext } from "../contexts/toastContext";
 
 export default function TodoList() {
   const { todos, setTodos } = useContext(TodosContext);
   const [newInput, setnewInput] = useState("");
   const [todosType, settodosType] = useState("all");
+  const [dialogId, setdialogId] = useState(null);
 
-  const todosJSX = todos.map((t) => {
-    if (todosType === "completed" && t.isCompleted) {
-      // Return the completed todos
-      return <Todo key={t.id} todo={t} />;
-    } else if (todosType === "non-completed" && !t.isCompleted) {
-      // Return the non-completed todos
-      return <Todo key={t.id} todo={t} />;
-    } else if (todosType === "all") {
-      // Return all todos
-      return <Todo key={t.id} todo={t} />;
-    }
-    // If none of the conditions match, return null to skip rendering
-    return null;
-  });
+  //using the toast snack context
+  const { ShowHideSnack } = useContext(toastContext);
 
-  function changeType(e) {
-    settodosType(e.target.value);
+  // Dialog configurations
+  const [open, setOpen] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editTodo, setEditTodo] = useState({ title: "", details: "" });
+
+  function openDialog(todo) {
+    setdialogId(todo);
+    setOpen(true);
   }
-  useEffect(() => {
-    const storageTodos = JSON.parse(localStorage.getItem("todos"));
-    setTodos(storageTodos);
-  }, []);
 
-  function handelAddClick() {
+  const handleClose = () => setOpen(false);
+
+  function openEditDialog(todo) {
+    setdialogId(todo);
+    setEditTodo({ title: todo.title, details: todo.details });
+    setOpenEdit(true);
+  }
+
+  const handleCloseEdit = () => setOpenEdit(false);
+
+  function handleDeleteConfirm() {
+    const updateTodo = todos.filter((t) => t.id !== dialogId.id);
+    setTodos(updateTodo);
+    localStorage.setItem("todos", JSON.stringify(updateTodo));
+    handleClose();
+    ShowHideSnack("تمت حذف المهمة بنجاح!");
+  }
+
+  function handleCheckClick(todo) {
+    const updateTodo = todos.map((t) =>
+      t.id === todo.id ? { ...t, isCompleted: !t.isCompleted } : t
+    );
+    setTodos(updateTodo);
+    localStorage.setItem("todos", JSON.stringify(updateTodo));
+    ShowHideSnack("تمت انجاز المهمة بنجاح!");
+  }
+
+  function handleEditClick(event) {
+    event.preventDefault();
+    const updateTodo = todos.map((t) =>
+      t.id === dialogId.id
+        ? { ...t, title: editTodo.title, details: editTodo.details }
+        : t
+    );
+    setTodos(updateTodo);
+    localStorage.setItem("todos", JSON.stringify(updateTodo));
+    handleCloseEdit();
+    ShowHideSnack("تمت تعديل المهمة بنجاح!");
+  }
+
+  const todosJSX = useMemo(() => {
+    return todos.map((t) => {
+      if (todosType === "completed" && t.isCompleted) {
+        return (
+          <Todo
+            key={t.id}
+            todo={t}
+            showDelete={openDialog}
+            openEdit={openEditDialog}
+            handleCheck={handleCheckClick}
+          />
+        );
+      } else if (todosType === "non-completed" && !t.isCompleted) {
+        return (
+          <Todo
+            key={t.id}
+            todo={t}
+            showDelete={openDialog}
+            openEdit={openEditDialog}
+            handleCheck={handleCheckClick}
+          />
+        );
+      } else if (todosType === "all") {
+        return (
+          <Todo
+            key={t.id}
+            todo={t}
+            showDelete={openDialog}
+            openEdit={openEditDialog}
+            handleCheck={handleCheckClick}
+          />
+        );
+      }
+      return null;
+    });
+  }, [todos, todosType]);
+
+  useEffect(() => {
+    const storageTodos = JSON.parse(localStorage.getItem("todos")) ?? [];
+    setTodos(storageTodos);
+  }, [setTodos]);
+
+  function handleAddClick() {
     const createTodo = {
       id: uid(),
       title: newInput,
@@ -58,9 +133,82 @@ export default function TodoList() {
     setTodos(updatedTodos);
     localStorage.setItem("todos", JSON.stringify(updatedTodos));
     setnewInput("");
+    ShowHideSnack("تمت اضافة مهمة جديدة بنجاح!");
   }
+
   return (
     <>
+      {/* Edit Dialog */}
+      <Dialog
+        style={{ direction: "rtl" }}
+        open={openEdit}
+        onClose={handleCloseEdit}
+        PaperProps={{
+          component: "form",
+          onSubmit: handleEditClick,
+        }}
+      >
+        <DialogTitle>تعديل المهمة</DialogTitle>
+        <DialogContent>
+          <DialogContentText>إلى ماذا تريد تعديل المهمة؟</DialogContentText>
+          <TextField
+            autoFocus
+            required
+            margin="dense"
+            id="title"
+            name="title"
+            value={editTodo.title}
+            type="text"
+            fullWidth
+            variant="standard"
+            onChange={(e) =>
+              setEditTodo({ ...editTodo, title: e.target.value })
+            }
+          />
+          <TextField
+            required
+            margin="dense"
+            id="details"
+            name="details"
+            value={editTodo.details}
+            type="text"
+            fullWidth
+            variant="standard"
+            onChange={(e) =>
+              setEditTodo({ ...editTodo, details: e.target.value })
+            }
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEdit}>تراجع</Button>
+          <Button type="submit">تعديل</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog
+        style={{ direction: "rtl" }}
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          {"هل انت متأكد حقاً من أمر الحذف؟"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            سيتم الحذف بشكل دائم دون أي تراجع
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>لا</Button>
+          <Button onClick={handleDeleteConfirm} autoFocus>
+            نعم, أحذف
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Container maxWidth="md">
         <Card
           sx={{ minWidth: 275 }}
@@ -76,13 +224,13 @@ export default function TodoList() {
             </Typography>
             <Divider />
 
-            {/* filter buttons */}
+            {/* Filter Buttons */}
             <ToggleButtonGroup
               style={{ direction: "ltr", margin: "30px 0px" }}
               color="primary"
               value={todosType}
               exclusive
-              onChange={changeType}
+              onChange={(e) => settodosType(e.target.value)}
               aria-label="Platform"
               centered
             >
@@ -100,9 +248,7 @@ export default function TodoList() {
               >
                 <TextField
                   value={newInput}
-                  onChange={(e) => {
-                    setnewInput(e.target.value);
-                  }}
+                  onChange={(e) => setnewInput(e.target.value)}
                   id="outlined-basic"
                   label="عنوان المهمة"
                   variant="outlined"
@@ -120,16 +266,14 @@ export default function TodoList() {
                   style={{ width: "100%", height: "100%" }}
                   disabled={newInput.length < 5}
                   variant="contained"
-                  onClick={() => {
-                    handelAddClick();
-                  }}
+                  onClick={handleAddClick}
                 >
                   إضافة
                 </Button>
               </Grid>
             </Grid>
 
-            {/* <Todo /> */}
+            {/* Render the Todos List */}
             {todosJSX}
           </CardContent>
         </Card>

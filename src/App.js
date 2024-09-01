@@ -8,7 +8,9 @@ import "@fontsource/cairo/700.css";
 import { useState } from "react";
 import { v4 as uid } from "uuid";
 import { TodosContext } from "./contexts/todosContext";
-import { red } from "@mui/material/colors";
+import SnackBar from "./components/SnackBar";
+import { toastContext } from "./contexts/toastContext";
+import { ShowChart } from "@mui/icons-material";
 
 const initTodos = [
   {
@@ -44,24 +46,33 @@ const theme = createTheme({
 
 function App() {
   const [todos, setTodos] = useState(initTodos);
-
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState();
+  function ShowHideSnack(message) {
+    setOpen(true);
+    setMessage(message);
+    setTimeout(() => setOpen(false), 2000);
+  }
   return (
     <>
       <ThemeProvider theme={theme}>
-        <TodosContext.Provider value={{ todos, setTodos }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor: "#191b1f",
-              height: "100vh",
-              direction: "rtl",
-            }}
-          >
-            <TodoList />
-          </div>
-        </TodosContext.Provider>
+        <toastContext.Provider value={{ ShowHideSnack }}>
+          <SnackBar open={open} message={message} />
+          <TodosContext.Provider value={{ todos, setTodos }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "#191b1f",
+                height: "100vh",
+                direction: "rtl",
+              }}
+            >
+              <TodoList />
+            </div>
+          </TodosContext.Provider>
+        </toastContext.Provider>
       </ThemeProvider>
     </>
   );
